@@ -1,6 +1,7 @@
 import pandas as pd
 import csv
 import datetime
+import re
 
 
 def to_time(timestamp, hour):
@@ -48,28 +49,42 @@ def process_file(fi):
             while '/' not in line:
                 line = next(fii)
         if '/' in line:
-            ln = line.replace(' ', '/').split('/')
+            ln1 = line.split(' ')
+            ln2 = re.findall('\d+/\d+|\d+/--|--/\d+|\d+/—|—/\d+|\d+/|/\d+\n', ln1[0])
+            print(ln2)
+            if len(ln2) == 0:
+                continue
+            ln = ln2[0].split('/')
             station = []
+            print(ln)
+
             if to_int(ln[0]):
                 time, hour = to_time(ln[0], hour)
                 station.append(time)
-            elif ln[0] == '--' or ln[0] == '--\n':
+            elif ln[0] == '--' or ln[0] == '—':
                 station.append('--')
             else:
                 station.append(None)
-            if to_int(ln[1]):
-                time, hour = to_time(ln[1], hour)
-                station.append(time)
-            elif ln[1] == '—\n' or ln[1] == '--\n':
-                station.append('--')
+
+            if len(ln) > 1:
+                if to_int(ln[1]):
+                    time, hour = to_time(ln[1], hour)
+                    station.append(time)
+                elif ln[1] == '—\n' or ln[1] == '--\n':
+                    station.append('--')
+                else:
+                    station.append(None)
             else:
                 station.append(None)
             alltime.append(station)
-        elif to_int(line):
-            time, hour = to_time(line, hour)
-            alltime.append(time)
-        elif line == '？\n':
+        elif line == '？\n' or line == '?\n':
             alltime.append('?')
+        else:
+            ln = re.findall('\d+', line)
+            if len(ln)>0:
+                time, hour = to_time(ln[0], hour)
+                alltime.append(time)
+
     return alltime
 
 
@@ -81,7 +96,6 @@ def combine_file(actual_time, scheduled_time):
     pass_sta = False
     current = []
     for index, row in row_iterator:
-        station = None
         if pd.notna(row[0]):
             station = row[0].split('?')[0]
             sta = True
@@ -96,20 +110,24 @@ def combine_file(actual_time, scheduled_time):
             current.append(arrtime)
 
         elif sta:
-            deptime = None
             if pd.isna(row[1]):
                 deptime = '--'
             else:
                 deptime = row[1][:5]
             if pass_sta:
                 current.append('レ')
-                current.append(None)
-                current.append(actual_time[i])
+                if len(actual_time[i]) == 2:
+                    current.append(actual_time[i][0])
+                    current.append(actual_time[i][1])
+                else:
+                    current.append(None)
+                    current.append(actual_time[i])
             else:
                 current.append(deptime)
                 current.append(actual_time[i][0])
                 current.append(actual_time[i][1])
             # master_time.append(current)
+            print(current)
             master_time.append(current)
             sta = False
             pass_sta = False
@@ -128,13 +146,13 @@ def main():
 
     actual = []
     # Process file
-    with open('201808.txt', 'r', encoding='utf-8') as fi:
+    with open('201805.txt', 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
 
-    scheduled = pd.read_csv('201808.csv', header=None)
+    scheduled = pd.read_csv('201805.csv', header=None)
     master = combine_file(actual, scheduled)
 
-    with open('2018-08.csv', "w") as output:
+    with open('2018-05.csv', "w") as output:
         writer = csv.writer(output, lineterminator='\n')
         writer.writerows(master)
 
