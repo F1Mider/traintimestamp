@@ -9,6 +9,8 @@ def to_time(timestamp, hour):
     timestamp = int(timestamp)
     if timestamp // 10000 > 0 or hour is None:
         hour = timestamp // 10000
+    if timestamp // 10000 == 24:
+        hour = 0
     min = timestamp % 10000 // 100
     sec = timestamp % 100
 
@@ -19,6 +21,8 @@ def try_to_time(timestamp):
     try:
         if timestamp / 10000 > 0:
             hour = timestamp // 10000
+            if timestamp // 10000 == 24:
+                hour = 0
         min = timestamp % 10000 // 100
         sec = timestamp % 100
         datetime.time(hour, min, sec)
@@ -51,12 +55,16 @@ def process_file(fi):
         if '/' in line:
             ln1 = line.split(' ')
             ln2 = re.findall('\d+/\d+|\d+/--|--/\d+|\d+/—|—/\d+|\d+/|/\d+\n', ln1[0])
-            print(ln2)
-            if len(ln2) == 0:
+            if '/' not in ln1[0]:
+                ln = re.findall('\d+', ln1[0])
+                if len(ln) > 0:
+                    time, hour = to_time(ln[0], hour)
+                    alltime.append(time)
                 continue
+            # if len(ln2) == 0:
+            #     continue
             ln = ln2[0].split('/')
             station = []
-            print(ln)
 
             if to_int(ln[0]):
                 time, hour = to_time(ln[0], hour)
@@ -146,13 +154,13 @@ def main():
 
     actual = []
     # Process file
-    with open('201805.txt', 'r', encoding='utf-8') as fi:
+    with open('201710.txt', 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
 
-    scheduled = pd.read_csv('201805.csv', header=None)
+    scheduled = pd.read_csv('201710.csv', header=None)
     master = combine_file(actual, scheduled)
 
-    with open('2018-05.csv', "w") as output:
+    with open('2017-10.csv', "w") as output:
         writer = csv.writer(output, lineterminator='\n')
         writer.writerows(master)
 
