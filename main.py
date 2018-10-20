@@ -4,28 +4,41 @@ import datetime
 import re
 
 
-def to_time(timestamp, hour):
+def to_time(timestamp: int, hour: int) -> (str, int):
+    """
+    Transforms timestamps into datetime.time
 
+    :param timestamp: the timestamp that went through try_to_time
+    :param hour: the hour passed from the previous line
+    :return: A string that converts from datetime.time and the hour for this timestamp
+    """
     timestamp = int(timestamp)
     if timestamp // 10000 > 0 or hour is None:
         hour = timestamp // 10000
     if timestamp // 10000 == 24:
         hour = 0
-    min = timestamp % 10000 // 100
+    minute = timestamp % 10000 // 100
     sec = timestamp % 100
 
-    return datetime.time(hour, min, sec).strftime('%H:%M:%S'), hour
+    return datetime.time(hour, minute, sec).strftime('%H:%M:%S'), hour
 
 
-def try_to_time(timestamp):
+def try_to_time(timestamp: int) -> bool:
+    """
+    Determine whether the integer passed in can be transformed into datetime.time
+
+    :param timestamp: A string extracted from the acutal time file
+    :return: Boolean: whether this string can be transformed into datetime.time
+    """
     try:
+        hour = None
         if timestamp / 10000 > 0:
             hour = timestamp // 10000
             if timestamp // 10000 == 24:
                 hour = 0
-        min = timestamp % 10000 // 100
+        minute = timestamp % 10000 // 100
         sec = timestamp % 100
-        datetime.time(hour, min, sec)
+        datetime.time(hour, minute, sec)
     except ValueError:
         return False
     except TypeError:
@@ -34,7 +47,14 @@ def try_to_time(timestamp):
     return True
 
 
-def to_int(timestamp):
+def to_int(timestamp: str) -> bool:
+    """
+    Transforms the timestamp into integer and check if it can be transformed into datetime.time. If so, return True.
+    If the string cannot be transformed into integer and then datetime.time, return False
+
+    :param timestamp: the string to be transformed
+    :return: A boolean whether the string can be transformed into datetime.time
+    """
     try:
         timestamp = int(timestamp)
     except ValueError:
@@ -44,8 +64,14 @@ def to_int(timestamp):
     return try_to_time(timestamp)
 
 
-def process_file(fi):
-    alltime = []
+def process_file(fi: list) -> list:
+    """
+    Takes in the actual timesheet and process line by line to extract the actual time for each station
+
+    :param fi: The list read from the txt file
+    :return: The time for all stations read from the file
+    """
+    all_time = []
     hour = None
     fii = iter(fi)
     for line in fii:
@@ -59,7 +85,7 @@ def process_file(fi):
                 ln = re.findall('\d+', ln1[0])
                 if len(ln) > 0:
                     time, hour = to_time(ln[0], hour)
-                    alltime.append(time)
+                    all_time.append(time)
                 continue
             # if len(ln2) == 0:
             #     continue
@@ -84,19 +110,26 @@ def process_file(fi):
                     station.append(None)
             else:
                 station.append(None)
-            alltime.append(station)
+            all_time.append(station)
         elif line == '？\n' or line == '?\n':
-            alltime.append('?')
+            all_time.append('?')
         else:
             ln = re.findall('\d+', line)
-            if len(ln)>0:
+            if len(ln) > 0:
                 time, hour = to_time(ln[0], hour)
-                alltime.append(time)
+                all_time.append(time)
 
-    return alltime
+    return all_time
 
 
-def combine_file(actual_time, scheduled_time):
+def combine_file(actual_time: list, scheduled_time: pd.DataFrame) -> list:
+    """
+    Takes the scheduled time DataFrame read from the csv file and combine with actual time list
+
+    :param actual_time: The list of actual times processed from process_file() method
+    :param scheduled_time: The pandas.DataFrame read from the csv file for station names and scheduled times
+    :return: A combined list with scheduled time and actual time for each station
+    """
     master_time = []
     row_iterator = scheduled_time.iterrows()
     i = 0
@@ -104,24 +137,24 @@ def combine_file(actual_time, scheduled_time):
     pass_sta = False
     current = []
     for index, row in row_iterator:
+        arr_time = None
         if pd.notna(row[0]):
             station = row[0].split('?')[0]
             sta = True
-            arrtime = None
             if row[1] == 'レ':
                 pass_sta = True
             elif pd.isna(row[1]):
-                arrtime = '--'
+                arr_time = '--'
             else:
-                arrtime = row[1][:5]
+                arr_time = row[1][:5]
             current.append(station)
-            current.append(arrtime)
+            current.append(arr_time)
 
         elif sta:
             if pd.isna(row[1]):
-                deptime = '--'
+                dep_time = '--'
             else:
-                deptime = row[1][:5]
+                dep_time = row[1][:5]
             if pass_sta:
                 current.append('レ')
                 if len(actual_time[i]) == 2:
@@ -131,10 +164,15 @@ def combine_file(actual_time, scheduled_time):
                     current.append(None)
                     current.append(actual_time[i])
             else:
-                current.append(deptime)
-                current.append(actual_time[i][0])
-                current.append(actual_time[i][1])
-            # master_time.append(current)
+                current.append(dep_time)
+                if arr_time == '--':
+                    current.append(arr_time)
+                else:
+                    current.append(actual_time[i][0])
+                if dep_time == '--':
+                    current.append(dep_time)
+                else:
+                    current.append(actual_time[i][1])
             print(current)
             master_time.append(current)
             sta = False
@@ -143,7 +181,34 @@ def combine_file(actual_time, scheduled_time):
             current = []
     print(master_time)
 
-    return(master_time)
+    return master_time
+
+
+def get_filename() -> tuple:
+    """
+    Choose from the preset year / month combinations as the file name to be processed
+
+    :return: A tuple of three files that will be the input/output file names
+    """
+    # year = '2016'
+    year = '2017'
+    # year = '2018'
+    # month = '01'
+    # month = '02'
+    # month = '03'
+    # month = '04'
+    # month = '05'
+    # month = '06'
+    # month = '07'
+    # month = '08'
+    month = '09'
+    # month = '10'
+    # month = '11'
+    # month = '12'
+    actual = year + month + '.txt'
+    scheduled = year + month + '.csv'
+    combined = year + '-' + month + '.csv'
+    return actual, scheduled, combined
 
 
 def main():
@@ -152,18 +217,18 @@ def main():
     :return:
     """
 
+    a, s, c = get_filename()
     actual = []
     # Process file
-    with open('201710.txt', 'r', encoding='utf-8') as fi:
+    with open(a, 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
 
-    scheduled = pd.read_csv('201710.csv', header=None)
+    scheduled = pd.read_csv(s, header=None)
     master = combine_file(actual, scheduled)
 
-    with open('2017-10.csv', "w") as output:
+    with open(c, "w", encoding='utf-8') as output:
         writer = csv.writer(output, lineterminator='\n')
         writer.writerows(master)
-
 
 
 if __name__ == '__main__':
