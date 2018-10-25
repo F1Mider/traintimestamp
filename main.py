@@ -76,6 +76,7 @@ def process_file(fi: list) -> list:
     fii = iter(fi)
     for line in fii:
         if line == '\n':
+            all_time.append([])
             while '/' not in line:
                 line = next(fii)
         if '/' in line:
@@ -118,7 +119,6 @@ def process_file(fi: list) -> list:
             if len(ln) > 0:
                 time, hour = to_time(ln[0], hour)
                 all_time.append(time)
-
     return all_time
 
 
@@ -138,6 +138,9 @@ def combine_file(actual_time: list, scheduled_time: pd.DataFrame) -> list:
     current = []
     for index, row in row_iterator:
         arr_time = None
+        if i < len(actual_time) and not actual_time[i]:
+            master_time.append([])
+            i += 1
         if pd.notna(row[0]):
             station = row[0].split('?')[0]
             sta = True
@@ -191,8 +194,8 @@ def get_filename() -> tuple:
     :return: A tuple of three files that will be the input/output file names
     """
     # year = '2016'
-    year = '2017'
-    # year = '2018'
+    # year = '2017'
+    year = '2018'
     # month = '01'
     # month = '02'
     # month = '03'
@@ -200,14 +203,14 @@ def get_filename() -> tuple:
     # month = '05'
     # month = '06'
     # month = '07'
-    # month = '08'
-    month = '09'
+    month = '08'
+    # month = '09'
     # month = '10'
     # month = '11'
     # month = '12'
-    actual = year + month + '.txt'
-    scheduled = year + month + '.csv'
-    combined = year + '-' + month + '.csv'
+    actual = 'data/' + year + month + '.txt'
+    scheduled = 'data/' + year + month + '.csv'
+    combined = 'output/' + year + '-' + month + '.csv'
     return actual, scheduled, combined
 
 
@@ -218,7 +221,6 @@ def main():
     """
 
     a, s, c = get_filename()
-    actual = []
     # Process file
     with open(a, 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
