@@ -81,7 +81,7 @@ def process_file(fi: list) -> list:
                 line = next(fii)
         if '/' in line:
             ln1 = line.split(' ')
-            ln2 = re.findall('\d+/\d+|\d+/--|--/\d+|\d+/—|—/\d+|\d+/|/\d+\n', ln1[0])
+            ln2 = re.findall('\d+/\d+|\d+/--|--/\d+|\d+/—|—/\d+|\d+/|/\d+\n|/\d+', ln1[0])
             if '/' not in ln1[0]:
                 ln = re.findall('\d+', ln1[0])
                 if len(ln) > 0:
@@ -203,10 +203,10 @@ def get_filename() -> tuple:
     # month = '05'
     # month = '06'
     # month = '07'
-    month = '08'
+    # month = '08'
     # month = '09'
     # month = '10'
-    # month = '11'
+    month = '11'
     # month = '12'
     actual = 'data/' + year + month + '.txt'
     scheduled = 'data/' + year + month + '.csv'
