@@ -142,7 +142,7 @@ def combine_file(actual_time: list, scheduled_time: pd.DataFrame) -> list:
             master_time.append([])
             i += 1
         if pd.notna(row[0]):
-            station = row[0].split('?')[0]
+            station = re.split('\?|\xa0',row[0])[0]
             sta = True
             if row[1] == 'レ':
                 pass_sta = True
@@ -195,8 +195,9 @@ def get_filename() -> tuple:
     """
     # year = '2016'
     # year = '2017'
-    year = '2018'
-    # month = '01'
+    # year = '2018'
+    year = '2019'
+    month = '01'
     # month = '02'
     # month = '03'
     # month = '04'
@@ -206,7 +207,7 @@ def get_filename() -> tuple:
     # month = '08'
     # month = '09'
     # month = '10'
-    month = '11'
+    # month = '11'
     # month = '12'
     actual = 'data/' + year + month + '.txt'
     scheduled = 'data/' + year + month + '.csv'
