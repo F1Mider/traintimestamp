@@ -23,6 +23,21 @@ def to_time(timestamp: int, hour: int) -> (str, int):
     return datetime.time(hour, minute, sec).strftime('%H:%M:%S'), hour
 
 
+def to_scheduled_time(timestamp: int) -> (str):
+    """
+    Transforms timestamps into datetime.time
+
+    :param timestamp: the timestamp that went through try_to_time
+    :return: A string that converts from datetime.time and the hour for this timestamp
+    """
+    timestamp = int(timestamp)
+
+    hour = timestamp // 100
+    minute = timestamp % 100
+
+    return datetime.time(hour, minute).strftime('%H:%M')
+
+
 def try_to_time(timestamp: int) -> bool:
     """
     Determine whether the integer passed in can be transformed into datetime.time
@@ -86,133 +101,41 @@ def process_file(fi: list) -> list:
                 ln = re.findall('\d+', ln1[0])
                 if len(ln) > 0:
                     time, hour = to_time(ln[0], hour)
-                    all_time.append(time)
+                    all_time.append([time,''])
+                    all_time.append((['','']))
                 continue
             # if len(ln2) == 0:
             #     continue
             ln = ln2[0].split('/')
-            station = []
 
             if to_int(ln[0]):
                 time, hour = to_time(ln[0], hour)
-                station.append(time)
+                all_time.append([time,''])
             elif ln[0] == '--' or ln[0] == '—':
-                station.append('--')
+                all_time.append(['ˇ',''])
             else:
-                station.append(None)
+                all_time.append(['ˇ',''])
 
             if len(ln) > 1:
                 if to_int(ln[1]):
                     time, hour = to_time(ln[1], hour)
-                    station.append(time)
+                    all_time.append([time,''])
                 elif ln[1] == '—\n' or ln[1] == '--\n':
-                    station.append('--')
+                    all_time.append(['——',''])
                 else:
-                    station.append(None)
+                    all_time.append(['——', ''])
             else:
-                station.append(None)
-            all_time.append(station)
+                all_time.append(['',''])
         elif line == '？\n' or line == '?\n':
             all_time.append('?')
+            all_time.append((['', '']))
         else:
             ln = re.findall('\d+', line)
             if len(ln) > 0:
                 time, hour = to_time(ln[0], hour)
-                all_time.append(time)
+                all_time.append([time,''])
+                all_time.append((['','']))
     return all_time
-
-
-def combine_file(actual_time: list, scheduled_time: pd.DataFrame) -> list:
-    """
-    Takes the scheduled time DataFrame read from the csv file and combine with actual time list
-
-    :param actual_time: The list of actual times processed from process_file() method
-    :param scheduled_time: The pandas.DataFrame read from the csv file for station names and scheduled times
-    :return: A combined list with scheduled time and actual time for each station
-    """
-    master_time = []
-    row_iterator = scheduled_time.iterrows()
-    i = 0
-    sta = False
-    pass_sta = False
-    current = []
-    for index, row in row_iterator:
-        arr_time = None
-        if i < len(actual_time) and not actual_time[i]:
-            master_time.append([])
-            i += 1
-        if pd.notna(row[0]):
-            station = re.split('\?|\xa0',row[0])[0]
-            sta = True
-            if row[1] == 'レ':
-                pass_sta = True
-            elif pd.isna(row[1]):
-                arr_time = '--'
-            else:
-                arr_time = row[1][:5]
-            current.append(station)
-            current.append(arr_time)
-
-        elif sta:
-            if pd.isna(row[1]):
-                dep_time = '--'
-            else:
-                dep_time = row[1][:5]
-            if pass_sta:
-                current.append('レ')
-                if len(actual_time[i]) == 2:
-                    current.append(actual_time[i][0])
-                    current.append(actual_time[i][1])
-                else:
-                    current.append(None)
-                    current.append(actual_time[i])
-            else:
-                current.append(dep_time)
-                if arr_time == '--':
-                    current.append(arr_time)
-                else:
-                    current.append(actual_time[i][0])
-                if dep_time == '--':
-                    current.append(dep_time)
-                else:
-                    current.append(actual_time[i][1])
-            print(current)
-            master_time.append(current)
-            sta = False
-            pass_sta = False
-            i += 1
-            current = []
-    print(master_time)
-
-    return master_time
-
-
-def get_filename() -> tuple:
-    """
-    Choose from the preset year / month combinations as the file name to be processed
-
-    :return: A tuple of three files that will be the input/output file names
-    """
-    # year = '2016'
-    year = '2017'
-    # year = '2018'
-    # year = '2019'
-    # month = '01'
-    # month = '02'
-    # month = '03'
-    # month = '04'
-    # month = '05'
-    # month = '06'
-    # month = '07'
-    # month = '08'
-    # month = '09'
-    # month = '10'
-    # month = '11'
-    month = '12'
-    actual = 'data/' + year + month + '.txt'
-    scheduled = 'data/' + year + month + '.csv'
-    combined = 'output/' + year + '-' + month + '.csv'
-    return actual, scheduled, combined
 
 
 def main():
@@ -221,17 +144,17 @@ def main():
     :return:
     """
 
-    a, s, c = get_filename()
+    a = '20190819.txt'
+    c = '20190819.csv'
     # Process file
     with open(a, 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
 
-    scheduled = pd.read_csv(s, header=None)
-    master = combine_file(actual, scheduled)
+    print(actual)
 
     with open(c, "w", encoding='utf-8') as output:
         writer = csv.writer(output, lineterminator='\n')
-        writer.writerows(master)
+        writer.writerows(actual)
 
 
 if __name__ == '__main__':

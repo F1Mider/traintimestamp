@@ -23,6 +23,21 @@ def to_time(timestamp: int, hour: int) -> (str, int):
     return datetime.time(hour, minute, sec).strftime('%H:%M:%S'), hour
 
 
+def to_scheduled_time(timestamp: int) -> (str):
+    """
+    Transforms timestamps into datetime.time
+
+    :param timestamp: the timestamp that went through try_to_time
+    :return: A string that converts from datetime.time and the hour for this timestamp
+    """
+    timestamp = int(timestamp)
+
+    hour = timestamp // 100
+    minute = timestamp % 100
+
+    return datetime.time(hour, minute).strftime('%H:%M')
+
+
 def try_to_time(timestamp: int) -> bool:
     """
     Determine whether the integer passed in can be transformed into datetime.time
@@ -187,16 +202,76 @@ def combine_file(actual_time: list, scheduled_time: pd.DataFrame) -> list:
     return master_time
 
 
+def combine_file_new(actual_time: list, scheduled_time: pd.DataFrame) -> list:
+    """
+    Takes the scheduled time DataFrame read from the csv file and combine with actual time list
+    Using the new format of scheduled time
+
+    :param actual_time: The list of actual times processed from process_file() method
+    :param scheduled_time: The pandas.DataFrame read from the csv file for station names and scheduled times
+    :return: A combined list with scheduled time and actual time for each station
+    """
+    master_time = []
+    row_iterator = scheduled_time.iterrows()
+    i = 0
+    pass_sta = False
+    current = []
+    for index, row in row_iterator:
+        arr_time = None
+        if i < len(actual_time) and not actual_time[i]:
+            master_time.append([])
+            i += 1
+        if pd.notna(row[0]):
+            station = row[0]
+            current.append(station)
+            if pd.isna(row[1]) and pd.isna(row[2]):
+                current.append('')
+                current.append('レ')
+                if len(actual_time[i]) == 2:
+                    current.append(actual_time[i][0])
+                    current.append(actual_time[i][1])
+                else:
+                    current.append(None)
+                    current.append(actual_time[i])
+            else:
+                if not pd.isna(row[1]):
+                    arr_time = to_scheduled_time(row[1])
+                else:
+                    arr_time = '--'
+                current.append(arr_time)
+                if not pd.isna(row[2]):
+                    dep_time = to_scheduled_time(row[2])
+                else:
+                    dep_time = '--'
+                current.append(dep_time)
+                if arr_time == '--':
+                    current.append(arr_time)
+                else:
+                    current.append(actual_time[i][0])
+                if dep_time == '--':
+                    current.append(dep_time)
+                else:
+                    current.append(actual_time[i][1])
+            print(current)
+            master_time.append(current)
+            i += 1
+            current = []
+    print(master_time)
+
+    return master_time
+
+
 def get_filename() -> tuple:
     """
     Choose from the preset year / month combinations as the file name to be processed
 
-    :return: A tuple of three files that will be the input/output file names
+    :return: A tuple of three files that will be the input/output file names and a Boolean indicator for the format of
+    scheduled time
     """
     # year = '2016'
-    year = '2017'
+    # year = '2017'
     # year = '2018'
-    # year = '2019'
+    year = '2019'
     # month = '01'
     # month = '02'
     # month = '03'
@@ -204,15 +279,17 @@ def get_filename() -> tuple:
     # month = '05'
     # month = '06'
     # month = '07'
-    # month = '08'
+    month = '08'
     # month = '09'
     # month = '10'
     # month = '11'
-    month = '12'
+    # month = '12'
+    new_type = True
+    # new_type = False
     actual = 'data/' + year + month + '.txt'
     scheduled = 'data/' + year + month + '.csv'
     combined = 'output/' + year + '-' + month + '.csv'
-    return actual, scheduled, combined
+    return actual, scheduled, combined, new_type
 
 
 def main():
@@ -221,13 +298,17 @@ def main():
     :return:
     """
 
-    a, s, c = get_filename()
+    a, s, c, n = get_filename()
     # Process file
     with open(a, 'r', encoding='utf-8') as fi:
         actual = process_file(fi)
 
     scheduled = pd.read_csv(s, header=None)
-    master = combine_file(actual, scheduled)
+    print(scheduled)
+    if n:
+        master = combine_file_new(actual, scheduled)
+    else:
+        master = combine_file(actual, scheduled)
 
     with open(c, "w", encoding='utf-8') as output:
         writer = csv.writer(output, lineterminator='\n')
